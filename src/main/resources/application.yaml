@@ -25,3 +25,11 @@ spring:
     secret-key: password
     bucket-name: music-covers
     expiration: 1800
+
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: alpha
+    tags-sorter: alpha
