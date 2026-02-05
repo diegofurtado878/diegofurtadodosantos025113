@@ -34,3 +34,9 @@ springdoc:
     operations-sorter: alpha
     tags-sorter: alpha
     filter: true
+
+api:
+  security:
+    token:
+      secret: ${JWT_SECRET:minha-chave-secreta-de-32-caracteres-ou-mais}
+      expiration-minutes: 120
