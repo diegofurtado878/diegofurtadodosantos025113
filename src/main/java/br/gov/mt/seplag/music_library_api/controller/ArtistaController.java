@@ -12,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
+import org.springdoc.core.converters.models.PageableAsQueryParam;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -25,10 +26,11 @@ public class ArtistaController {
 
     @GetMapping
     @Operation(summary = "Lista artistas com paginação e filtros")
+    @PageableAsQueryParam
     public ResponseEntity<Page<ArtistaResponseDTO>> listar(
             @RequestParam(required = false) String nome,
             @RequestParam(required = false) TipoArtista tipoArtista,
-            @PageableDefault(size = 10, sort = "nome") Pageable pageable
+            @Parameter(hidden = true) @PageableDefault(size = 10, sort = "nome") Pageable pageable
     ) {
         return ResponseEntity.ok(service.buscarTodosPaginado(nome, tipoArtista, pageable));
     }

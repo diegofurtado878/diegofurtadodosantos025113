@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
+import org.springdoc.core.converters.models.PageableAsQueryParam;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -76,10 +77,11 @@ public class AlbumController {
 
     @GetMapping
     @Operation(summary = "Lista álbuns com paginação")
+    @PageableAsQueryParam
     public ResponseEntity<Page<AlbumResponseDTO>> listar(
             @Parameter(description = "Filtro por nome do artista") @RequestParam(required = false) String nomeArtista,
             @Parameter(description = "Filtro por tipo do artista") @RequestParam(required = false) String tipoArtista,
-            @PageableDefault(size = 10) Pageable pageable
+            @Parameter(hidden = true) @PageableDefault(size = 10) Pageable pageable
     ) {
         return ResponseEntity.ok(albumService.listarPaginado(nomeArtista, tipoArtista, pageable));
     }

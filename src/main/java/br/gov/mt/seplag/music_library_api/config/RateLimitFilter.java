@@ -49,7 +49,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
         response.setStatus(429);
         response.setContentType(MediaType.APPLICATION_JSON_VALUE + ";charset=UTF-8");
-        response.getWriter().write("{\"error\":\"Too Many Requests\",\"message\":\"Rate limit exceeded (10 requests per minute)\"}");
+        response.getWriter().write("{\"status\":429,\"error\":\"Too Many Requests\",\"message\":\"Rate limit exceeded (10 requests per minute)\"}");
     }
 
     private String resolveKey(HttpServletRequest request) {
