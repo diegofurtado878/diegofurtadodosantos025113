@@ -2,17 +2,14 @@ package br.gov.mt.seplag.music_library_api.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
-import lombok.*;
 
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 
 @Entity
 @Table(name = "ARTISTA")
-@Getter
-@Setter
-@NoArgsConstructor
-@AllArgsConstructor
 public class Artista {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "ID_ARTISTA")
@@ -21,17 +18,28 @@ public class Artista {
     @Column(name = "NOME_ARTISTA", nullable = false)
     private String nome;
 
-    /**
-     * Lado dono da relação ManyToMany.
-     * Marcado com @JsonIgnore para evitar recursão infinita caso a entidade seja serializada diretamente.
-     * A API deve expor essa relação via DTOs específicos.
-     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "TIPO_ARTISTA")
+    private TipoArtista tipoArtista;
+
+    @JsonIgnore
     @ManyToMany
     @JoinTable(
             name = "ARTISTA_ALBUM",
             joinColumns = @JoinColumn(name = "ID_ARTISTA"),
             inverseJoinColumns = @JoinColumn(name = "ID_ALBUM")
     )
-    @JsonIgnore
-    private List<Album> albuns;
+    private Set<Album> albuns = new HashSet<>();
+
+    public Integer getId() { return id; }
+    public void setId(Integer id) { this.id = id; }
+
+    public String getNome() { return nome; }
+    public void setNome(String nome) { this.nome = nome; }
+
+    public TipoArtista getTipoArtista() { return tipoArtista; }
+    public void setTipoArtista(TipoArtista tipoArtista) { this.tipoArtista = tipoArtista; }
+
+    public Set<Album> getAlbuns() { return albuns; }
+    public void setAlbuns(Set<Album> albuns) { this.albuns = albuns; }
 }

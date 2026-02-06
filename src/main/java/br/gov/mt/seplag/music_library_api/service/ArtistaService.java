@@ -1,61 +1,69 @@
 package br.gov.mt.seplag.music_library_api.service;
 
-import br.gov.mt.seplag.music_library_api.dto.AlbumResumoDTO;
 import br.gov.mt.seplag.music_library_api.dto.ArtistaRequestDTO;
 import br.gov.mt.seplag.music_library_api.dto.ArtistaResponseDTO;
-import br.gov.mt.seplag.music_library_api.entity.Album;
 import br.gov.mt.seplag.music_library_api.entity.Artista;
+import br.gov.mt.seplag.music_library_api.entity.TipoArtista;
 import br.gov.mt.seplag.music_library_api.repository.ArtistaRepository;
-import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-
-import java.util.List;
-import java.util.Optional;
-import java.util.stream.Collectors;
+import org.springframework.web.server.ResponseStatusException;
 
 @Service
-@RequiredArgsConstructor
 public class ArtistaService {
 
     private final ArtistaRepository repository;
 
-    public List<ArtistaResponseDTO> buscarTodos() {
-        return repository.findAll()
-                .stream()
-                .map(this::toResponseDTO)
-                .collect(Collectors.toList());
+    public ArtistaService(ArtistaRepository repository) {
+        this.repository = repository;
     }
 
-    public Optional<ArtistaResponseDTO> buscarPorId(Integer id) {
-        return repository.findById(id)
-                .map(this::toResponseDTO);
+    public Page<ArtistaResponseDTO> buscarTodosPaginado(String nome, TipoArtista tipo, Pageable pageable) {
+        boolean hasNome = nome != null && !nome.isBlank();
+        Page<Artista> page;
+        if (tipo != null && hasNome) {
+            page = repository.findByTipoArtistaAndNomeContainingIgnoreCase(tipo, nome, pageable);
+        } else if (tipo != null) {
+            page = repository.findByTipoArtista(tipo, pageable);
+        } else if (hasNome) {
+            page = repository.findByNomeContainingIgnoreCase(nome, pageable);
+        } else {
+            page = repository.findAll(pageable);
+        }
+        return page.map(this::toResponse);
     }
 
     public ArtistaResponseDTO criar(ArtistaRequestDTO dto) {
-        Artista artista = new Artista();
-        artista.setNome(dto.nome());
-        Artista salvo = repository.save(artista);
-        return toResponseDTO(salvo);
+        Artista a = new Artista();
+        a.setNome(dto.nome());
+        a.setTipoArtista(dto.tipoArtista());
+        return toResponse(repository.save(a));
     }
 
-    public Optional<ArtistaResponseDTO> atualizar(Integer id, ArtistaRequestDTO dto) {
+    public java.util.Optional<ArtistaResponseDTO> buscarPorId(Integer id) {
+        return repository.findById(id).map(this::toResponse);
+    }
+
+    public java.util.Optional<ArtistaResponseDTO> atualizar(Integer id, ArtistaRequestDTO dto) {
         return repository.findById(id)
-                .map(existente -> {
-                    existente.setNome(dto.nome());
-                    Artista salvo = repository.save(existente);
-                    return toResponseDTO(salvo);
+                .map(a -> {
+                    a.setNome(dto.nome());
+                    a.setTipoArtista(dto.tipoArtista());
+                    return toResponse(repository.save(a));
                 });
     }
 
-    private ArtistaResponseDTO toResponseDTO(Artista artista) {
-        List<AlbumResumoDTO> albuns = artista.getAlbuns() == null ? List.of() :
-                artista.getAlbuns().stream()
-                        .map(this::toAlbumResumoDTO)
-                        .collect(Collectors.toList());
-        return new ArtistaResponseDTO(artista.getId(), artista.getNome(), albuns);
+    public void excluir(Integer id) {
+        Artista a = repository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Artista não encontrado"));
+        a.getAlbuns().clear();
+        repository.save(a);
+        repository.delete(a);
     }
 
-    private AlbumResumoDTO toAlbumResumoDTO(Album album) {
-        return new AlbumResumoDTO(album.getId(), album.getTitulo());
+    private ArtistaResponseDTO toResponse(Artista a) {
+        return new ArtistaResponseDTO(a.getId(), a.getNome(), a.getTipoArtista());
     }
 }

@@ -2,7 +2,6 @@ package br.gov.mt.seplag.music_library_api.config;
 
 import br.gov.mt.seplag.music_library_api.repository.UsuarioRepository;
 import br.gov.mt.seplag.music_library_api.security.SecurityFilter;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -17,45 +16,51 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
 
-    @Autowired
-    private SecurityFilter securityFilter;
+    private final SecurityFilter securityFilter;
+    private final RateLimitFilter rateLimitFilter;
+    private final UsuarioRepository usuarioRepository;
 
-    @Autowired
-    private UsuarioRepository usuarioRepository;
+    public SecurityConfig(SecurityFilter securityFilter, RateLimitFilter rateLimitFilter, UsuarioRepository usuarioRepository) {
+        this.securityFilter = securityFilter;
+        this.rateLimitFilter = rateLimitFilter;
+        this.usuarioRepository = usuarioRepository;
+    }
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         return http
                 .csrf(csrf -> csrf.disable())
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(authorize -> authorize
-                        // Libera Swagger
+                .cors(cors -> {})
+                .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html", "/api-docs/**").permitAll()
-                        // Libera Login
-                        .requestMatchers(HttpMethod.POST, "/auth/login").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/auth/login", "/auth/refresh").permitAll()
+                        .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .exceptionHandling(ex -> ex
-                        .authenticationEntryPoint(authenticationEntryPoint())
-                        .accessDeniedHandler(accessDeniedHandler())
+                        .authenticationEntryPoint((req, res, e) -> {
+                            res.setStatus(HttpStatus.UNAUTHORIZED.value());
+                            res.setContentType("application/json;charset=UTF-8");
+                            res.getWriter().write("{\"status\":401,\"error\":\"Unauthorized\",\"message\":\"Credenciais inválidas ou ausentes\"}");
+                        })
                 )
-                // Diz ao Spring para usar o filtro JWT antes do filtro padrão
                 .addFilterBefore(securityFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterAfter(rateLimitFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();
     }
 
     @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration) throws Exception {
-        return authenticationConfiguration.getAuthenticationManager();
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
+        return config.getAuthenticationManager();
     }
 
     @Bean
@@ -63,47 +68,12 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
-    /**
-     * Carrega usuários a partir do banco usando o UsuarioRepository.
-     * Será usado automaticamente pelo AuthenticationManager junto com o PasswordEncoder.
-     */
     @Bean
     public UserDetailsService userDetailsService() {
         return username -> {
-            UserDetails user = usuarioRepository.findByNome(username);
-            if (user == null) {
-                throw new UsernameNotFoundException("Usuário não encontrado: " + username);
-            }
+            UserDetails user = usuarioRepository.findByLogin(username);
+            if (user == null) throw new UsernameNotFoundException("Usuário não encontrado: " + username);
             return user;
-        };
-    }
-
-    /**
-     * Ponto de entrada para falhas de autenticação (credenciais ausentes ou inválidas).
-     * Garante retorno 401 em JSON ao invés de 403 vazio.
-     */
-    @Bean
-    public AuthenticationEntryPoint authenticationEntryPoint() {
-        return (request, response, authException) -> {
-            response.setStatus(HttpStatus.UNAUTHORIZED.value());
-            response.setContentType("application/json");
-            response.getWriter().write(
-                    "{\"status\":401,\"error\":\"Unauthorized\",\"message\":\"Credenciais inválidas ou ausentes\"}"
-            );
-        };
-    }
-
-    /**
-     * Handler para tentativas de acesso sem permissão (usuário autenticado sem autoridade suficiente).
-     */
-    @Bean
-    public AccessDeniedHandler accessDeniedHandler() {
-        return (request, response, accessDeniedException) -> {
-            response.setStatus(HttpStatus.FORBIDDEN.value());
-            response.setContentType("application/json");
-            response.getWriter().write(
-                    "{\"status\":403,\"error\":\"Forbidden\",\"message\":\"Acesso negado\"}"
-            );
         };
     }
 }

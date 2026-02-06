@@ -2,17 +2,12 @@ package br.gov.mt.seplag.music_library_api.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
-import lombok.*;
 
+import java.util.HashSet;
 import java.util.Set;
 
 @Entity
 @Table(name = "ALBUM")
-@Getter
-@Setter
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
 public class Album {
 
     @Id
@@ -23,12 +18,22 @@ public class Album {
     @Column(name = "TITULO_ALBUM", nullable = false)
     private String titulo;
 
-    /**
-     * Lado inverso da relação ManyToMany.
-     * Também é ignorado na serialização direta da entidade para evitar recursão.
-     * A exposição via API será feita por DTOs específicos.
-     */
-    @ManyToMany(mappedBy = "albuns")
+    @Column(name = "KEY_OBJECT_MINIO", length = 500)
+    private String keyObjectMinio;
+
     @JsonIgnore
-    private Set<Artista> artistas;
+    @ManyToMany(mappedBy = "albuns")
+    private Set<Artista> artistas = new HashSet<>();
+
+    public Integer getId() { return id; }
+    public void setId(Integer id) { this.id = id; }
+
+    public String getTitulo() { return titulo; }
+    public void setTitulo(String titulo) { this.titulo = titulo; }
+
+    public String getKeyObjectMinio() { return keyObjectMinio; }
+    public void setKeyObjectMinio(String keyObjectMinio) { this.keyObjectMinio = keyObjectMinio; }
+
+    public Set<Artista> getArtistas() { return artistas; }
+    public void setArtistas(Set<Artista> artistas) { this.artistas = artistas; }
 }

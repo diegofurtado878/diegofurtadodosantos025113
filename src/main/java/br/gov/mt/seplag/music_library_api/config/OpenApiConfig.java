@@ -17,8 +17,8 @@ public class OpenApiConfig {
         return new OpenAPI()
                 .info(new Info()
                         .title("Music Library API")
-                        .description("API para gerenciamento de álbuns e artistas")
-                        .version("1.0"))
+                        .description("API para gerenciamento de álbuns e artistas (versão v1)")
+                        .version("v1"))
                 .addSecurityItem(new SecurityRequirement().addList(securitySchemeName))
                 .components(new Components()
                         .addSecuritySchemes(securitySchemeName,
