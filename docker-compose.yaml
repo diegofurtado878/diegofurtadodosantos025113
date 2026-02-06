@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   db:
     image: postgres:18-alpine
@@ -12,15 +10,21 @@ services:
       - "5432:5432"
     networks:
       - music-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d music-library"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   minio:
     image: minio/minio
     container_name: minio
     environment:
-      - MINIO_ROOT_USER=root
-      - MINIO_ROOT_PASSWORD=rootpass123
-      - MINIO_DEFAULT_BUCKETS=bucket
-      - MINIO_SERVER_URL=http://localhost:9000
+      MINIO_ROOT_USER: root
+      MINIO_ROOT_PASSWORD: rootpass123
+      MINIO_DEFAULT_BUCKETS: album-covers
+      MINIO_SERVER_URL: http://localhost:9000
     networks:
       - music-network
     volumes:
@@ -28,7 +32,38 @@ services:
     ports:
       - "9000:9000"
       - "9001:9001"
-    command: [ "server","/data", "--console-address", ":9001" ]
+    command: ["server", "/data", "--console-address", ":9001"]
+    # MinIO não expõe healthcheck simples sem curl; backend usa service_started
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: music-library-api
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/music-library
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: admin
+      MINIO_URL: http://minio:9000
+      MINIO_PUBLIC_URL: http://minio:9000
+      MINIO_ACCESS_KEY: root
+      MINIO_SECRET_KEY: rootpass123
+      MINIO_BUCKET: album-covers
+    networks:
+      - music-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/actuator/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    depends_on:
+      db:
+        condition: service_healthy
+      minio:
+        condition: service_started
 
 networks:
   music-network:
