@@ -6,6 +6,4 @@ public record AlbumResponseDTO(
         Integer id,
         String titulo,
         List<ArtistaResumoDTO> artistas
-) {
-}
-
+) {}

@@ -1,11 +1,9 @@
 package br.gov.mt.seplag.music_library_api.dto;
 
-import java.util.List;
+import br.gov.mt.seplag.music_library_api.entity.TipoArtista;
 
 public record ArtistaResponseDTO(
         Integer id,
         String nome,
-        List<AlbumResumoDTO> albuns
-) {
-}
-
+        TipoArtista tipoArtista
+) {}

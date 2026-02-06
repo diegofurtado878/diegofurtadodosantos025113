@@ -1,3 +1,3 @@
 package br.gov.mt.seplag.music_library_api.dto;
 
-public record LoginResponseDTO(String token) {}
+public record LoginResponseDTO(String token, String refreshToken) {}

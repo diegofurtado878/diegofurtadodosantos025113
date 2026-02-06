@@ -1,11 +1,11 @@
 package br.gov.mt.seplag.music_library_api.dto;
 
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.NotEmpty;
+
+import java.util.List;
 
 public record AlbumRequestDTO(
-        @NotBlank(message = "O título do álbum é obrigatório")
-        @Size(min = 1, max = 255, message = "O título deve ter entre 1 e 255 caracteres")
-        String titulo
-) {
-}
+        @NotBlank String titulo,
+        @NotEmpty List<Integer> artistasIds
+) {}
