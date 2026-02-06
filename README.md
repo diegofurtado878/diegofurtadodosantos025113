@@ -53,34 +53,6 @@ API REST em Java/Spring Boot que disponibiliza dados sobre artistas e álbuns, d
 
 ---
 
-## Requisitos Implementados
-
-| Requisito | Implementação |
-|-----------|---------------|
-| **a) Segurança CORS** | `CorsConfig` – origens configuráveis via `app.cors.allowed-origins` |
-| **b) JWT + refresh** | Token 5 min, refresh 7 dias, endpoints `/auth/login` e `/auth/refresh` |
-| **c) POST, PUT, GET** | Álbuns e artistas com CRUD completo |
-| **d) Paginação** | `Pageable` nos álbuns (`?page=0&size=10`) |
-| **e) Cantores/bandas** | Filtro `tipoArtista` em artistas; álbuns exibem tipo dos artistas associados |
-| **f) Nome + ordenação** | Artistas: `?nome=...&sort=nome,asc` ou `sort=nome,desc` |
-| **g) Upload de capas** | `POST /v1/albuns/{id}/capas` (multipart) |
-| **h) MinIO (S3)** | Bucket `album-covers`, armazenamento de imagens |
-| **i) URLs pré-assinadas** | `GET /v1/albuns/{id}/capas` – expiração 30 min |
-| **j) Versionamento** | Base `/v1/` em todos os endpoints |
-| **k) Flyway** | Migrações em `src/main/resources/db/migration/` |
-| **l) OpenAPI/Swagger** | `/swagger-ui.html` e `/api-docs` |
-
-### Requisitos Sênior
-
-| Requisito | Implementação |
-|-----------|---------------|
-| **Health Checks** | Actuator: `/actuator/health`, Liveness e Readiness |
-| **Testes unitários** | Teste de contexto (`MusicLibraryApiApplicationTests`) |
-| **WebSocket** | Não implementado |
-| **Rate limit** | 10 requisições/minuto por usuário (Bucket4j) |
-| **Regionais** | Não implementado |
-
----
 
 ## Pré-requisitos
 
@@ -136,16 +108,6 @@ Configuração padrão: `localhost:5432/music-library`, `localhost:9000` (MinIO)
 ./mvnw test
 ```
 
-### Fluxo manual
-
-1. **Registrar usuário** (ou usar admin/admin já existente)
-
-```bash
-curl -X POST http://localhost:8080/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{"login":"novousuario","senha":"senha123"}'
-```
-
 Resposta: `accessToken` e `refreshToken` (201 Created).
 
 2. **Login**
@@ -170,12 +132,6 @@ curl -X GET "http://localhost:8080/v1/albuns?page=0&size=10&tipoArtista=CANTOR" 
 - Swagger UI: http://localhost:8080/swagger-ui.html  
 - OpenAPI JSON: http://localhost:8080/api-docs
 
-### Usuário padrão
-
-- **Login:** `admin`
-- **Senha:** `admin` (hash BCrypt na migration)
-
----
 
 ## Endpoints Principais
 
@@ -229,8 +185,6 @@ src/main/resources/
 └── db/migration/   # Flyway (V1..V6)
 ```
 
----
 
-## Licença e Autoria
 
-Projeto desenvolvido como parte do processo seletivo SEPLAG/MT. Código de autoria própria, com uso de tecnologias e bibliotecas open source conforme licenças respectivas.
+
