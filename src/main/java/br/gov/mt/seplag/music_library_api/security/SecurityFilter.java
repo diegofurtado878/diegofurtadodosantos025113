@@ -5,7 +5,6 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -15,35 +14,40 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 
 @Component
-public class SecurityFilter extends OncePerRequestFilter { // Certifique-se que OncePerRequestFilter é do jakarta
+public class SecurityFilter extends org.springframework.web.filter.OncePerRequestFilter {
 
-    @Autowired
-    private TokenService tokenService;
+    private final TokenService tokenService;
+    private final UsuarioRepository usuarioRepository;
 
-    @Autowired
-    private UsuarioRepository repository;
+    public SecurityFilter(TokenService tokenService, UsuarioRepository usuarioRepository) {
+        this.tokenService = tokenService;
+        this.usuarioRepository = usuarioRepository;
+    }
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
-        var token = this.recoverToken(request);
-// Dentro do doFilterInternal em SecurityFilter.java
-        if(token != null){
-            var login = tokenService.validateToken(token);
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+            throws ServletException, IOException {
+        String token = recoverToken(request);
+        if (token != null) {
+            String login = tokenService.validateAndGetLogin(token);
             if (login != null && !login.isBlank()) {
-                UserDetails user = repository.findByNome(login);
-
+                UserDetails user = usuarioRepository.findByLogin(login);
                 if (user != null) {
-                    var authentication = new UsernamePasswordAuthenticationToken(user, null, user.getAuthorities());
-                    SecurityContextHolder.getContext().setAuthentication(authentication);
+                    var auth = new UsernamePasswordAuthenticationToken(user, null, user.getAuthorities());
+                    SecurityContextHolder.getContext().setAuthentication(auth);
                 }
             }
         }
         filterChain.doFilter(request, response);
     }
 
-    private String recoverToken(HttpServletRequest request){
-        var authHeader = request.getHeader("Authorization");
-        if(authHeader == null) return null;
-        return authHeader.replace("Bearer ", "");
+    private String recoverToken(HttpServletRequest request) {
+        var header = request.getHeader("Authorization");
+        if (header == null || header.isBlank()) return null;
+        String value = header.trim();
+        while (value.regionMatches(true, 0, "Bearer ", 0, 7)) {
+            value = value.substring(7).trim();
+        }
+        return value.isEmpty() ? null : value;
     }
 }

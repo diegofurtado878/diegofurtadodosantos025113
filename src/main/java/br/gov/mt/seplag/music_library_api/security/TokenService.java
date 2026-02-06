@@ -1,53 +1,52 @@
 package br.gov.mt.seplag.music_library_api.security;
 
 import br.gov.mt.seplag.music_library_api.entity.Usuario;
-import com.auth0.jwt.JWT;
-import com.auth0.jwt.algorithms.Algorithm;
-import com.auth0.jwt.exceptions.JWTCreationException;
-import com.auth0.jwt.exceptions.JWTVerificationException;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
+import java.time.temporal.ChronoUnit;
+import java.util.Date;
 
 @Service
 public class TokenService {
 
-    // Lê a chave secreta definida no seu application.yaml
-    @Value("${api.security.token.secret}")
-    private String secret;
+    private final SecretKey key;
+    private final long expirationMinutes;
+
+    public TokenService(
+            @Value("${security.jwt.secret:change-me-super-secret-change-me-super-secret-32chars}") String secret,
+            @Value("${security.jwt.accessTokenMinutes:5}") long expirationMinutes
+    ) {
+        this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+        this.expirationMinutes = expirationMinutes;
+    }
 
     public String generateToken(Usuario usuario) {
-        try {
-            Algorithm algorithm = Algorithm.HMAC256(secret);
-            return JWT.create()
-                    .withIssuer("music-library-api") // Nome da sua aplicação
-                    .withSubject(usuario.getNome()) // Identifica o usuário (login)
-                    .withExpiresAt(genExpirationDate()) // Define quando o token expira
-                    .sign(algorithm);
-        } catch (JWTCreationException exception) {
-            throw new RuntimeException("Erro ao gerar token", exception);
-        }
+        Instant now = Instant.now();
+        Instant exp = now.plus(expirationMinutes, ChronoUnit.MINUTES);
+        return Jwts.builder()
+                .subject(usuario.getLogin())
+                .issuedAt(Date.from(now))
+                .expiration(Date.from(exp))
+                .signWith(key)
+                .compact();
     }
 
-    public String validateToken(String token) {
+    public String validateAndGetLogin(String token) {
         try {
-            Algorithm algorithm = Algorithm.HMAC256(secret);
-            return JWT.require(algorithm)
-                    .withIssuer("music-library-api")
+            return Jwts.parser()
+                    .verifyWith(key)
                     .build()
-                    .verify(token)
+                    .parseSignedClaims(token)
+                    .getPayload()
                     .getSubject();
-        } catch (JWTVerificationException exception) {
-            // Token inválido ou expirado
+        } catch (Exception e) {
             return null;
         }
-    }
-
-    private Instant genExpirationDate() {
-        // Expira em 2 horas, fuso horário do Brasil (-03:00)
-        return LocalDateTime.now().plusHours(2).toInstant(ZoneOffset.of("-03:00"));
     }
 }
